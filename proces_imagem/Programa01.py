@@ -31,7 +31,7 @@ if __name__ == "__main__":
    #image_converter("pizza2.jpg", "pizza2.gif", "PNG")
    #image_converter("pizza2.jpg", "pizza2.hso", "PNG")
 
-   image_converter("pizza2.jpg", "pizza.png", "png")
+   image_converter("sushi.jpg", "damedane.png", "png")
 
    #image_format("pizza2.jpg")
    #image_format("pizza2.gif")
