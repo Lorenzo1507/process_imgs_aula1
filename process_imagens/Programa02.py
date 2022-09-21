@@ -21,8 +21,8 @@ def cria_thumbnail(filename):
 def mostrar_imagem(imagem, window):
     imagem.thumbnail((500,500))
     bio = io.BytesIO()
-    imagem.save(bio, "PNG")
-    window["-IMAGE-"].update(data=bio.getvalue(), size=(500,500))
+    imagem.save(bio, format="PNG")
+    window["-IMAGE-"].draw_image(data=bio.getvalue(), location=(0,400))
 
 def carrega_imagem(filename, window):
     if os.path.exists(filename):
@@ -82,51 +82,20 @@ def salvar_img(filename, nomeSave, formato):
         else:
             salvar_url(filename, nomeSave)
 
-#Ao invés dessa função usar função popup_get_file
-def open_window(window):
-    layout = [
-        [sg.Text("Escolha a foto pelo sistema ou por URL")],
-        [sg.InputText(key="-PATH_OR_URL-"), 
-        sg.FileBrowse(file_types=[("JPEG (*.jpg)", "*.jpg"), ("Todos os arquivos", "*.*")])
-        ],
-        [sg.Button("Abrir"), sg.Exit()]
-    ]
-
-    windowOP = sg.Window("Abrir arquivo", layout)
-    while True:
-        event, values = windowOP.read()
-        if event in (sg.WIN_CLOSED, 'Exit'):
-            break
-
-        if event == "Abrir":
-            filePath = values["-PATH_OR_URL-"]
-
-            if os.path.exists(filePath):
-                carrega_imagem(filePath, window)
-                windowOP.close() 
-            
-            else:
-                abre_url(filePath, window)
-                windowOP.close()
-
-    windowOP.close()
-            
-
-
 def main():
     menu_def=[
         ['File', ['Save', ['Gerar thumbnail', 'Salvar atual', 'Salvar com qualidade',['Muito baixa', 'Baixa', 'Média', 'Original'],
         'Formato da Imagem', ['Salvar como png', 'Salvar como jpg']], 'Exit']],
         ['Edit', ['Filtros', ['sepia', 'preto e branco', 'cores'],
         'Polir', ['Blur', 'Box Blur', 'Contour', 'Detail', 'Edge Enhance', 'Emboss', 'Find Edges', 'Gaussian blur', 'Sharpen', 'Smooth'], 
-        'Desfazer']],
-        ['Help', 'About...']
+        'Crop','Desfazer']],
+        ['Informações']
     ]
     
     layout = [
         [sg.Menu(menu_def, background_color='lightsteelblue',text_color='navy', font='Verdana', pad=(10,10))],
        
-        [sg.Image(key="-IMAGE-", size=(500,500))],
+        [sg.Graph(key="-IMAGE-", canvas_size=(500,500), graph_bottom_left=(0, 0), graph_top_right=(400, 400), change_submits=True, drag_submits=True)],
         [
             sg.Text("Arquivo ou URL da Imagem:"),
             sg.Input(size=(25,1), key="-FILE-"),
@@ -136,15 +105,35 @@ def main():
     ]
         
     window = sg.Window("Visualizador de Imagem", layout=layout)
+    dragging = False
+    ponto_inicial = ponto_final = retangulo = None
+
     while True:
         event, value = window.read()
         if event == "Exit" or event == sg.WINDOW_CLOSED:
             break
 
-        filename = value["-FILE-"]
-        condition = None
+        if event == "-IMAGE-":
+            x, y = value["-IMAGE-"]
+            if not dragging:
+                ponto_inicial = (x, y)
+                print("Inicio: xi:", x ,"yi: ", y)
+                dragging = True
+            else:
+                ponto_final = (x, y)
+                print("Fim: xf:", x ,"yf: ", y)
+            if retangulo:
+                window["-IMAGE-"].delete_figure(retangulo)
+            if None not in (ponto_inicial, ponto_final):
+                retangulo = window["-IMAGE-"].draw_rectangle(ponto_inicial, ponto_final, line_color='red')
 
-        print(event)
+        elif event.endswith('+UP'):
+            dragging = False
+
+
+        filename = value["-FILE-"]
+
+        #print(event)
 
         if event == 'Gerar thumbnail':
             cria_thumbnail(filename)
@@ -230,6 +219,14 @@ def main():
         if event == 'Smooth':
             #image_smooth("sharpen1.jpg", "sharpen2.jpg", window)
             image_smooth(filename, "sharpen2.jpg", window)
+
+        if event == 'Crop':
+            #(xi, yi) = ponto_inicial
+            #(xf, yf) = ponto_final
+
+            crop_image(filename,
+              (203, 96, 294, 268), # Left, Upper, Right, Lower
+              "raiox_cropped.jpg")
 
             
             
@@ -351,6 +348,35 @@ def image_smooth(input_image, output_image, window):
     
     mostrar_imagem(filtered_image, window)
     #filtered_image.save(output_image)
+
+def mirror(image_path, output_image_path):
+    image = Image.open(image_path)
+    mirror_image = image.transpose(Image.FLIP_TOP_BOTTOM) #FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM, TRANSPOSE
+    mirror_image.save(output_image_path)
+    #mirror("raiox.jpg", "raiox_mirrored.jpg")
+
+
+def crop_image(image_path, coords, output_image_path):
+    image = Image.open(image_path)
+    cropped_image = image.crop(coords)
+    cropped_image.save(output_image_path)
+    # crop_image("raiox.jpg",
+              # (140, 61, 328, 383), # Left, Upper, Right, Lower
+              # "raiox_cropped.jpg")
+
+def resize(input_image_path, output_image_path, size):
+    image = Image.open(input_image_path)
+    resized_image = image.resize(size)
+    resized_image.save(output_image_path)
+    #resize("raiox.jpg", "raiox_resized.jpg", (100,300))
+
+def rotate(image_path, degrees_to_rotate, output_image_path):
+    image_obj = Image.open(image_path)
+    rotated_image = image_obj.rotate(degrees_to_rotate)
+    rotated_image.save(output_image_path)
+    #rotate("raiox.jpg", 45, "raiox_rotated.jpg")
+
+
 
 
 

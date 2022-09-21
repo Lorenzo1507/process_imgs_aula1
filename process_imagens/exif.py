@@ -20,5 +20,5 @@ def get_exif(filename):
     return exif_data    
 
 if __name__ == "__main__":
-    exif = get_exif("hawaii.png")
+    exif = get_exif("pizza.jpg")
     print(exif)
