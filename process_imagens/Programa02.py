@@ -4,8 +4,40 @@ import os
 from pickletools import optimize
 import requests
 import PySimpleGUI as sg
+
+import shutil
+import tempfile
+
 from PIL import Image
 from PIL import ImageFilter
+from PIL import ImageEnhance
+
+def open_slider():
+    layout = [
+        [
+            sg.Slider(range=(0, 5), default_value=2, resolution=0.1, orientation="h", enable_events=True, key="-FATOR-"),
+            sg.Button("Ok")
+        ]
+    ]
+        
+    window = sg.Window("Selecionar Fator", layout=layout)
+
+
+    while True:
+        event, value = window.read()
+        if event == "Exit" or event == sg.WINDOW_CLOSED:
+            break
+
+        fator = value["-FATOR-"]
+
+        if event == "Ok":
+            window.close()
+            return fator
+
+
+
+    window.close()
+   
 
 def cria_thumbnail(filename):
     if os.path.exists(filename):
@@ -82,13 +114,77 @@ def salvar_img(filename, nomeSave, formato):
         else:
             salvar_url(filename, nomeSave)
 
+def brilho(filename, fator, output_filename):
+    image = Image.open(filename)
+    enhancer = ImageEnhance.Brightness(image)
+    new_image = enhancer.enhance(fator)
+    new_image.save(output_filename)
+
+def contraste(filename, fator, output_filename):
+    image = Image.open(filename)
+    enhancer = ImageEnhance.Contrast(image)
+    new_image = enhancer.enhance(fator)
+    new_image.save(output_filename)
+
+def cores(filename, fator, output_filename):
+    image = Image.open(filename)
+    enhancer = ImageEnhance.Color(image)
+    new_image = enhancer.enhance(fator)
+    new_image.save(output_filename)
+
+def nitidez(filename, fator, output_filename):
+    image = Image.open(filename)
+    enhancer = ImageEnhance.Sharpness(image)
+    new_image = enhancer.enhance(fator)
+    new_image.save(output_filename)
+
+efeitos = {
+    "Normal": shutil.copy,
+    "Brilho": brilho,
+    "Cores": cores,
+    "Contraste": contraste,
+    "Nitidez": nitidez
+}
+
+def aplica_efeito(values, fator, efeito, window):
+    efeito_selecionado = efeito
+    filename = values["-FILE-"]
+    factor = fator
+    
+    if filename:
+        if efeito_selecionado == "Normal":
+            efeitos[efeito_selecionado](filename, tmp_file)
+        else:
+            efeitos[efeito_selecionado](filename, factor, tmp_file)
+        
+        image = Image.open(tmp_file)
+        image.thumbnail((400, 400))
+        bio = io.BytesIO()
+        image.save(bio, format="PNG")
+        window["-IMAGE-"].update(data=bio.getvalue(), size=(400, 400))
+
+def save_image(filename):
+    save_filename = sg.popup_get_file("Salvar", file_types=file_types, save_as=True, no_window=True)
+    if save_filename == filename:
+        sg.popup_error("Você não pode substituir a imagem original!")
+    else:
+        if save_filename:
+            shutil.copy(tmp_file, save_filename)
+            sg.popup(f"Arquivo {save_filename}, salvo com sucesso!")
+
+
+file_types = [("JPEG (*.jpg)", "*.jpg"), ("PNG (*.png)", "*.png"), ("All files (*.*)", "*.*")]
+tmp_file = tempfile.NamedTemporaryFile(suffix=".jpg").name
+
 def main():
+    effect_names = list(efeitos.keys())
     menu_def=[
         ['File', ['Save', ['Gerar thumbnail', 'Salvar atual', 'Salvar com qualidade',['Muito baixa', 'Baixa', 'Média', 'Original'],
         'Formato da Imagem', ['Salvar como png', 'Salvar como jpg']], 'Exit']],
         ['Edit', ['Filtros', ['sepia', 'preto e branco', 'cores'],
         'Polir', ['Blur', 'Box Blur', 'Contour', 'Detail', 'Edge Enhance', 'Emboss', 'Find Edges', 'Gaussian blur', 'Sharpen', 'Smooth'], 
-        'Crop','Desfazer']],
+        'Crop',
+        'Contrastes', ['Normal', 'Brilho', 'Cores', 'Contraste', 'Nitidez'], 'Desfazer']],
         ['Informações']
     ]
     
@@ -107,6 +203,8 @@ def main():
     window = sg.Window("Visualizador de Imagem", layout=layout)
     dragging = False
     ponto_inicial = ponto_final = retangulo = None
+
+    efeito = "Normal"
 
     while True:
         event, value = window.read()
@@ -130,6 +228,14 @@ def main():
         elif event.endswith('+UP'):
             dragging = False
 
+
+         #'Brilho', 'Cores', 'Contraste', 'Nitidez'
+        if event == 'Normal' or event == 'Brilho' or event == 'Cores' or event == 'Contraste' or event == 'Nitidez':
+            fator = open_slider()
+
+            if event in ["Carregar a Imagem", event, fator]:
+                aplica_efeito(value, fator, event, window)
+        
 
         filename = value["-FILE-"]
 
@@ -169,9 +275,7 @@ def main():
             salvar_img(filename, nomeImagem,formato)
 
         if event == 'Salvar atual':
-            nomeImagem = sg.popup_get_text('Digite o nome do arquivo com o formato (ex: pizza.png)', keep_on_top=True)
-            #condition.save(nomeImagem)
-            
+            save_image(filename)
        
         if event == 'sepia':
             converte_sepia(filename, "pizza_sepia.png", window)
@@ -228,6 +332,7 @@ def main():
               (203, 96, 294, 268), # Left, Upper, Right, Lower
               "raiox_cropped.jpg")
 
+        
             
             
 
@@ -255,8 +360,7 @@ def converte_sepia(input, output, window):
     sepia = imagem.convert("RGB")
 
     mostrar_imagem(sepia, window)
-    return sepia
-    #sepia.save(output)
+    sepia.save(output)
 
 def muda_para_cinza(imagem_entrada, imagem_saida, window):
     imagem = Image.open(imagem_entrada)
@@ -266,8 +370,7 @@ def muda_para_cinza(imagem_entrada, imagem_saida, window):
     imagem = imagem.convert("L")
     mostrar_imagem(imagem, window)
 
-    return imagem
-    #imagem.save(imagem_saida)
+    imagem.save(imagem_saida)
 
 
 def image_blur(input_image, output_image, window):
@@ -275,7 +378,7 @@ def image_blur(input_image, output_image, window):
     filtered_image = image.filter(ImageFilter.BLUR)
 
     mostrar_imagem(filtered_image, window)
-    #filtered_image.save(output_image)
+    filtered_image.save(output_image)
 
 
 def image_boxblur(input_image, output_image, window):
@@ -283,7 +386,7 @@ def image_boxblur(input_image, output_image, window):
     filtered_image = image.filter(ImageFilter.BoxBlur(radius=3))
     
     mostrar_imagem(filtered_image, window)
-    #filtered_image.save(output_image)
+    filtered_image.save(output_image)
 
 
 def image_contour(input_image, output_image, window):
@@ -291,7 +394,7 @@ def image_contour(input_image, output_image, window):
     filtered_image = image.filter(ImageFilter.CONTOUR)
     
     mostrar_imagem(filtered_image, window)
-    #filtered_image.save(output_image)
+    filtered_image.save(output_image)
 
 
 def image_detail(input_image, output_image, window):
@@ -299,7 +402,7 @@ def image_detail(input_image, output_image, window):
     filtered_image = image.filter(ImageFilter.DETAIL)
     
     mostrar_imagem(filtered_image, window)
-    #filtered_image.save(output_image)
+    filtered_image.save(output_image)
 
 
 def image_edge_enhance(input_image, output_image, window):
@@ -307,7 +410,7 @@ def image_edge_enhance(input_image, output_image, window):
     filtered_image = image.filter(ImageFilter.EDGE_ENHANCE)
    
     mostrar_imagem(filtered_image, window)
-    #filtered_image.save(output_image)
+    filtered_image.save(output_image)
 
 
 def image_emboss(input_image, output_image, window):
@@ -315,7 +418,7 @@ def image_emboss(input_image, output_image, window):
     filtered_image = image.filter(ImageFilter.EMBOSS)
    
     mostrar_imagem(filtered_image, window)
-    #filtered_image.save(output_image)
+    filtered_image.save(output_image)
 
 
 def image_find_edges(input_image, output_image, window):
@@ -323,7 +426,7 @@ def image_find_edges(input_image, output_image, window):
     filtered_image = image.filter(ImageFilter.FIND_EDGES)
     
     mostrar_imagem(filtered_image, window)
-    #filtered_image.save(output_image)
+    filtered_image.save(output_image)
 
 
 def image_gaussian_blur(input_image, output_image, window):
@@ -331,7 +434,7 @@ def image_gaussian_blur(input_image, output_image, window):
     filtered_image = image.filter(ImageFilter.GaussianBlur)
     
     mostrar_imagem(filtered_image, window)
-    #filtered_image.save(output_image)
+    filtered_image.save(output_image)
 
 
 def image_sharpen(input_image, output_image, window):
@@ -339,7 +442,7 @@ def image_sharpen(input_image, output_image, window):
     filtered_image = image.filter(ImageFilter.SHARPEN)
     
     mostrar_imagem(filtered_image, window)
-    #filtered_image.save(output_image)
+    filtered_image.save(output_image)
 
 
 def image_smooth(input_image, output_image, window):
@@ -347,7 +450,7 @@ def image_smooth(input_image, output_image, window):
     filtered_image = image.filter(ImageFilter.SMOOTH)
     
     mostrar_imagem(filtered_image, window)
-    #filtered_image.save(output_image)
+    filtered_image.save(output_image)
 
 def mirror(image_path, output_image_path):
     image = Image.open(image_path)
