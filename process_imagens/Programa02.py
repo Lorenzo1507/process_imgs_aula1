@@ -1,4 +1,3 @@
-from fileinput import filename
 import io
 import os
 from pickletools import optimize
@@ -11,6 +10,8 @@ import tempfile
 from PIL import Image
 from PIL import ImageFilter
 from PIL import ImageEnhance
+
+import tempfile
 
 def open_slider():
     layout = [
@@ -56,12 +57,14 @@ def mostrar_imagem(imagem, window):
     imagem.save(bio, format="PNG")
     window["-IMAGE-"].draw_image(data=bio.getvalue(), location=(0,400))
 
+
 def carrega_imagem(filename, window):
     if os.path.exists(filename):
         imagem = Image.open(filename)
         mostrar_imagem(imagem, window)
+        imagem.save(tmp_file, optimize=True)
 
-def reduzir_qualidade(filename, qualidade):
+def reduzir_qualidade(filename, qualidade, tmp):
     if os.path.exists(filename):
         imagem = Image.open(filename)
         imagem.save("baixa_qualidade.jpg", format="JPEG", optimize=True, quality=int(qualidade))
@@ -114,29 +117,29 @@ def salvar_img(filename, nomeSave, formato):
         else:
             salvar_url(filename, nomeSave)
 
-def brilho(filename, fator, output_filename):
+def brilho(filename, fator):
     image = Image.open(filename)
     enhancer = ImageEnhance.Brightness(image)
     new_image = enhancer.enhance(fator)
-    new_image.save(output_filename)
+    new_image.save(filename)
 
-def contraste(filename, fator, output_filename):
+def contraste(filename, fator):
     image = Image.open(filename)
     enhancer = ImageEnhance.Contrast(image)
     new_image = enhancer.enhance(fator)
-    new_image.save(output_filename)
+    new_image.save(filename)
 
-def cores(filename, fator, output_filename):
+def cores(filename, fator):
     image = Image.open(filename)
     enhancer = ImageEnhance.Color(image)
     new_image = enhancer.enhance(fator)
-    new_image.save(output_filename)
+    new_image.save(filename)
 
-def nitidez(filename, fator, output_filename):
+def nitidez(filename, fator):
     image = Image.open(filename)
     enhancer = ImageEnhance.Sharpness(image)
     new_image = enhancer.enhance(fator)
-    new_image.save(output_filename)
+    new_image.save(filename)
 
 efeitos = {
     "Normal": shutil.copy,
@@ -162,6 +165,7 @@ def aplica_efeito(values, fator, efeito, window):
         bio = io.BytesIO()
         image.save(bio, format="PNG")
         window["-IMAGE-"].update(data=bio.getvalue(), size=(400, 400))
+
 
 def save_image(filename):
     save_filename = sg.popup_get_file("Salvar", file_types=file_types, save_as=True, no_window=True)
@@ -239,10 +243,9 @@ def main():
 
         filename = value["-FILE-"]
 
-        #print(event)
 
         if event == 'Gerar thumbnail':
-            cria_thumbnail(filename)
+            cria_thumbnail(tmp_file)
 
         if event == "Carregar Imagem":
 
@@ -253,82 +256,82 @@ def main():
                 abre_url(filename, window)
 
         if event == 'Muito baixa':
-            reduzir_qualidade(filename, 1)
+            reduzir_qualidade(tmp_file, 1)
         if event == 'Baixa':
-             reduzir_qualidade(filename, 25)
+             reduzir_qualidade(tmp_file, 25)
         if event == 'Média':
-             reduzir_qualidade(filename, 50)
+             reduzir_qualidade(tmp_file, 50)
         if event == 'Original':
              nomeImagem = sg.popup_get_text('Digite o nome do arquivo', keep_on_top=True)
              formato = "jpeg"
-             salvar_img(filename, nomeImagem,formato)
+             salvar_img(tmp_file, nomeImagem,formato)
         
 
         if event == 'Salvar como png':
             nomeImagem = sg.popup_get_text('Digite o nome do arquivo', keep_on_top=True)
             formato = "png"
-            salvar_img(filename, nomeImagem,formato)
+            salvar_img(tmp_file, nomeImagem,formato)
 
         if event == 'Salvar como jpg':
             nomeImagem = sg.popup_get_text('Digite o nome do arquivo', keep_on_top=True)
             formato = "png"
-            salvar_img(filename, nomeImagem,formato)
+            salvar_img(tmp_file, nomeImagem,formato)
 
         if event == 'Salvar atual':
-            save_image(filename)
+            save_image(tmp_file)
        
         if event == 'sepia':
-            converte_sepia(filename, "pizza_sepia.png", window)
+            converte_sepia(tmp_file, window)
         
         if event == 'preto e branco':
-            muda_para_cinza(filename, "pizza_cinza.jpg", window)
+            muda_para_cinza(tmp_file, window)
 
         #'Blur', 'Box Blur', 'Contour', 'Detail', 'Edge Enhance', 'Emboss', 'Find Edges', 'Gaussian blur', 'Sharpen', "Smooth"
         if event == 'Blur':
             #image_blur("blur.png","blur1.png", window)
-            image_blur(filename,"blur1.png", window)
+            image_blur(tmp_file, window)
         
         if event == 'Box Blur':
             #image_boxblur("blur.png", "blur2.png", window)
-            image_boxblur(filename, "blur2.png", window)
+            image_boxblur(tmp_file, window)
         
         if event == 'Contour':
             #image_contour("hand.jpg", "hand_contour.jpg", window)
-            image_contour(filename, "hand_contour.jpg", window)
+            image_contour(tmp_file, window)
         
         if event == 'Detail':
             #image_detail("detail.png", "detail1.png", window)
-            image_detail(filename, "detail1.png", window)
+            image_detail(tmp_file, window)
         
         if event == 'Edge Enhance':
             #image_edge_enhance("raiox.jpg", "raiox1.jpg", window)
-            image_edge_enhance(filename, "raiox1.jpg", window)
+            image_edge_enhance(tmp_file, window)
 
         if event == 'Emboss':
             #image_emboss("emboss.jpg", "emboss2.jpg", window)
-            image_emboss(filename, "emboss2.jpg", window)
+            image_emboss(tmp_file, window)
 
         if event == 'Find Edges':
             #image_find_edges("emboss.jpg", "emboss1.jpg", window)
-            image_find_edges(filename, "emboss1.jpg", window)
+            image_find_edges(tmp_file, window)
 
         if event == 'Gaussian blur':
             #image_gaussian_blur("blur.png", "blur3.png", window)
-            image_gaussian_blur(filename, "blur3.png", window)
+            image_gaussian_blur(tmp_file, window)
 
         if event == 'Sharpen':
             #image_sharpen("sharpen.jpg", "sharpen1.jpg", window)
-            image_sharpen(filename, "sharpen1.jpg", window)
+            image_sharpen(tmp_file, window)
 
         if event == 'Smooth':
             #image_smooth("sharpen1.jpg", "sharpen2.jpg", window)
-            image_smooth(filename, "sharpen2.jpg", window)
+            image_smooth(tmp_file, window)
 
         if event == 'Crop':
             #(xi, yi) = ponto_inicial
             #(xf, yf) = ponto_final
 
-            crop_image(filename,
+            crop_image(tmp_file,
               (203, 96, 294, 268), # Left, Upper, Right, Lower
               "raiox_cropped.jpg")
 
@@ -349,7 +352,7 @@ def calcula_paleta(branco):
         paleta.extend((new_red, new_green, new_blue))
     return paleta
 
-def converte_sepia(input, output, window):
+def converte_sepia(input, window):
     branco = (255, 240, 192)
     paleta = calcula_paleta(branco)
 
@@ -360,9 +363,9 @@ def converte_sepia(input, output, window):
     sepia = imagem.convert("RGB")
 
     mostrar_imagem(sepia, window)
-    sepia.save(output)
+    sepia.save(input)
 
-def muda_para_cinza(imagem_entrada, imagem_saida, window):
+def muda_para_cinza(imagem_entrada, window):
     imagem = Image.open(imagem_entrada)
     #LUMA é um padrão de converção para a escala de cinza, por isso usa "L"
     #Para outras escalas apenas usa o convert usando "1" (entre aspas mesmo)
@@ -370,117 +373,112 @@ def muda_para_cinza(imagem_entrada, imagem_saida, window):
     imagem = imagem.convert("L")
     mostrar_imagem(imagem, window)
 
-    imagem.save(imagem_saida)
+    imagem.save(imagem_entrada)
 
 
-def image_blur(input_image, output_image, window):
+def image_blur(input_image, window):
     image = Image.open(input_image)
     filtered_image = image.filter(ImageFilter.BLUR)
 
+    filtered_image.save(input_image)
     mostrar_imagem(filtered_image, window)
-    filtered_image.save(output_image)
 
 
-def image_boxblur(input_image, output_image, window):
+def image_boxblur(input_image, window):
     image = Image.open(input_image)
     filtered_image = image.filter(ImageFilter.BoxBlur(radius=3))
     
+    filtered_image.save(input_image)
     mostrar_imagem(filtered_image, window)
-    filtered_image.save(output_image)
 
-
-def image_contour(input_image, output_image, window):
+def image_contour(input_image, window):
     image = Image.open(input_image)
     filtered_image = image.filter(ImageFilter.CONTOUR)
     
+    filtered_image.save(input_image)
     mostrar_imagem(filtered_image, window)
-    filtered_image.save(output_image)
 
 
-def image_detail(input_image, output_image, window):
+def image_detail(input_image, window):
     image = Image.open(input_image)
     filtered_image = image.filter(ImageFilter.DETAIL)
     
+    filtered_image.save(input_image)
     mostrar_imagem(filtered_image, window)
-    filtered_image.save(output_image)
 
 
-def image_edge_enhance(input_image, output_image, window):
+def image_edge_enhance(input_image, window):
     image = Image.open(input_image)
     filtered_image = image.filter(ImageFilter.EDGE_ENHANCE)
    
+    filtered_image.save(input_image)
     mostrar_imagem(filtered_image, window)
-    filtered_image.save(output_image)
 
 
-def image_emboss(input_image, output_image, window):
+def image_emboss(input_image, window):
     image = Image.open(input_image)
     filtered_image = image.filter(ImageFilter.EMBOSS)
    
+    filtered_image.save(input_image)
     mostrar_imagem(filtered_image, window)
-    filtered_image.save(output_image)
 
 
-def image_find_edges(input_image, output_image, window):
+def image_find_edges(input_image, window):
     image = Image.open(input_image)
     filtered_image = image.filter(ImageFilter.FIND_EDGES)
     
+    filtered_image.save(input_image)
     mostrar_imagem(filtered_image, window)
-    filtered_image.save(output_image)
 
-
-def image_gaussian_blur(input_image, output_image, window):
+def image_gaussian_blur(input_image, window):
     image = Image.open(input_image)
     filtered_image = image.filter(ImageFilter.GaussianBlur)
     
+    filtered_image.save(input_image)
     mostrar_imagem(filtered_image, window)
-    filtered_image.save(output_image)
 
 
-def image_sharpen(input_image, output_image, window):
+def image_sharpen(input_image, window):
     image = Image.open(input_image)
     filtered_image = image.filter(ImageFilter.SHARPEN)
     
+    filtered_image.save(input_image)
     mostrar_imagem(filtered_image, window)
-    filtered_image.save(output_image)
 
 
-def image_smooth(input_image, output_image, window):
+def image_smooth(input_image, window):
     image = Image.open(input_image)
     filtered_image = image.filter(ImageFilter.SMOOTH)
     
+    filtered_image.save(input_image)
     mostrar_imagem(filtered_image, window)
-    filtered_image.save(output_image)
 
-def mirror(image_path, output_image_path):
+def mirror(image_path):
     image = Image.open(image_path)
     mirror_image = image.transpose(Image.FLIP_TOP_BOTTOM) #FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM, TRANSPOSE
-    mirror_image.save(output_image_path)
+    mirror_image.save(image_path)
     #mirror("raiox.jpg", "raiox_mirrored.jpg")
 
 
-def crop_image(image_path, coords, output_image_path):
+def crop_image(image_path, coords):
     image = Image.open(image_path)
     cropped_image = image.crop(coords)
-    cropped_image.save(output_image_path)
+    cropped_image.save(image_path)
     # crop_image("raiox.jpg",
               # (140, 61, 328, 383), # Left, Upper, Right, Lower
               # "raiox_cropped.jpg")
 
-def resize(input_image_path, output_image_path, size):
+def resize(input_image_path, size):
     image = Image.open(input_image_path)
     resized_image = image.resize(size)
-    resized_image.save(output_image_path)
+    resized_image.save(input_image_path)
     #resize("raiox.jpg", "raiox_resized.jpg", (100,300))
 
-def rotate(image_path, degrees_to_rotate, output_image_path):
+def rotate(image_path, degrees_to_rotate):
     image_obj = Image.open(image_path)
     rotated_image = image_obj.rotate(degrees_to_rotate)
-    rotated_image.save(output_image_path)
+    rotated_image.save(image_path)
     #rotate("raiox.jpg", 45, "raiox_rotated.jpg")
-
-
-
 
 
 
